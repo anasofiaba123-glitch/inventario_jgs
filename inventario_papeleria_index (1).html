@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario Papelería</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
+    header { background: #333; color: #fff; padding: 10px; text-align: center; }
+    #product-list { display: flex; flex-wrap: wrap; padding: 20px; }
+    .product { background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin: 10px; padding: 10px; width: 200px; text-align: center; }
+    .product img { max-width: 100%; height: 120px; object-fit: cover; border-radius: 6px; }
+    #owner-panel, #login-panel { display: none; padding: 20px; }
+    .hidden { display: none; }
+    .btn { padding: 6px 12px; border: none; border-radius: 6px; background: #333; color: white; cursor: pointer; margin: 4px; }
+    .btn:hover { background: #555; }
+    input, select { padding: 6px; margin: 4px 0; width: 100%; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Inventario Papelería</h1>
+    <button class="btn" onclick="showLoginPanel()">Panel del dueño</button>
+  </header>
+
+  <section id="product-list"></section>
+
+  <section id="login-panel">
+    <h2>Acceso dueño</h2>
+    <input type="password" id="owner-password" placeholder="Contraseña" />
+    <button class="btn" onclick="loginOwner()">Entrar</button>
+    <button class="btn" onclick="hideLoginPanel()">Cancelar</button>
+  </section>
+
+  <section id="owner-panel">
+    <h2>Panel del dueño</h2>
+
+    <h3>Agregar producto</h3>
+    <input type="text" id="new-name" placeholder="Nombre" />
+    <input type="number" id="new-price" placeholder="Precio" />
+    <input type="number" id="new-qty" placeholder="Cantidad" />
+    <input type="file" id="new-image" accept="image/*" />
+    <button class="btn" onclick="addProduct()">Agregar</button>
+
+    <h3>Estilo de página</h3>
+    <label>Color de fondo: <input type="color" id="bg-color" onchange="updateStyle()"></label>
+    <label>Tipografía: 
+      <select id="font-family" onchange="updateStyle()">
+        <option value="Arial">Arial</option>
+        <option value="Verdana">Verdana</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Courier New">Courier New</option>
+      </select>
+    </label>
+    <label>Tamaño letra: <input type="number" id="font-size" value="16" onchange="updateStyle()"> px</label>
+    <button class="btn" onclick="resetStyle()">Restaurar</button>
+
+    <h3>Cambiar contraseña</h3>
+    <input type="password" id="new-password" placeholder="Nueva contraseña" />
+    <button class="btn" onclick="changePassword()">Guardar nueva contraseña</button>
+
+    <h3>Productos</h3>
+    <div id="owner-products"></div>
+
+    <button class="btn" onclick="logoutOwner()">Cerrar sesión</button>
+  </section>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    let ownerLogged = false;
+    let passwordHash = "";
+
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function loadSettings() {
+      const doc = await db.collection("meta").doc("settings").get();
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.ownerPasswordHash) passwordHash = data.ownerPasswordHash;
+        if (data.styles) applyStyles(data.styles);
+      } else {
+        passwordHash = await sha256("jgs123");
+        await db.collection("meta").doc("settings").set({ ownerPasswordHash: passwordHash });
+      }
+    }
+
+    async function loginOwner() {
+      const pass = document.getElementById("owner-password").value;
+      const hash = await sha256(pass);
+      if (hash === passwordHash) {
+        ownerLogged = true;
+        document.getElementById("owner-panel").style.display = "block";
+        document.getElementById("login-panel").style.display = "none";
+        loadOwnerProducts();
+      } else {
+        alert("Contraseña incorrecta");
+      }
+    }
+
+    function logoutOwner() {
+      ownerLogged = false;
+      document.getElementById("owner-panel").style.display = "none";
+    }
+
+    function showLoginPanel() { document.getElementById("login-panel").style.display = "block"; }
+    function hideLoginPanel() { document.getElementById("login-panel").style.display = "none"; }
+
+    async function changePassword() {
+      const newPass = document.getElementById("new-password").value;
+      if (!newPass) return alert("Escribe una nueva contraseña");
+      const newHash = await sha256(newPass);
+      await db.collection("meta").doc("settings").update({ ownerPasswordHash: newHash });
+      passwordHash = newHash;
+      alert("Contraseña actualizada correctamente");
+      document.getElementById("new-password").value = "";
+    }
+
+    async function addProduct() {
+      const name = document.getElementById("new-name").value;
+      const price = parseFloat(document.getElementById("new-price").value);
+      const qty = parseInt(document.getElementById("new-qty").value);
+      const file = document.getElementById("new-image").files[0];
+      if (!name || !price || !qty || !file) return alert("Completa todos los campos");
+      const ref = storage.ref().child("products/" + Date.now() + file.name);
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      await db.collection("products").add({ name, price, qty, image: url });
+      document.getElementById("new-name").value = "";
+      document.getElementById("new-price").value = "";
+      document.getElementById("new-qty").value = "";
+      document.getElementById("new-image").value = "";
+    }
+
+    async function loadProducts() {
+      db.collection("products").onSnapshot(snapshot => {
+        const container = document.getElementById("product-list");
+        container.innerHTML = "";
+        snapshot.forEach(doc => {
+          const p = doc.data();
+          container.innerHTML += `<div class='product'><img src="${p.image}"><h4>${p.name}</h4><p>$${p.price}</p><p>Stock: ${p.qty}</p></div>`;
+        });
+      });
+    }
+
+    async function loadOwnerProducts() {
+      db.collection("products").onSnapshot(snapshot => {
+        const container = document.getElementById("owner-products");
+        container.innerHTML = "";
+        snapshot.forEach(doc => {
+          const p = doc.data();
+          container.innerHTML += `<div class='product'><img src="${p.image}"><h4>${p.name}</h4><p>$${p.price}</p><p>Stock: ${p.qty}</p><button class='btn' onclick="deleteProduct('${doc.id}')">Eliminar</button></div>`;
+        });
+      });
+    }
+
+    async function deleteProduct(id) {
+      await db.collection("products").doc(id).delete();
+    }
+
+    function updateStyle() {
+      const styles = {
+        bg: document.getElementById("bg-color").value,
+        font: document.getElementById("font-family").value,
+        size: document.getElementById("font-size").value
+      };
+      applyStyles(styles);
+      db.collection("meta").doc("settings").update({ styles });
+    }
+
+    function resetStyle() {
+      applyStyles({ bg: "#f5f5f5", font: "Arial", size: 16 });
+      db.collection("meta").doc("settings").update({ styles: { bg: "#f5f5f5", font: "Arial", size: 16 } });
+    }
+
+    function applyStyles(styles) {
+      document.body.style.backgroundColor = styles.bg;
+      document.body.style.fontFamily = styles.font;
+      document.body.style.fontSize = styles.size + "px";
+      document.getElementById("bg-color").value = styles.bg;
+      document.getElementById("font-family").value = styles.font;
+      document.getElementById("font-size").value = styles.size;
+    }
+
+    loadSettings();
+    loadProducts();
+  </script>
+</body>
+</html>
