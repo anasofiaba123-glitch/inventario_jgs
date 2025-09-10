@@ -118,14 +118,6 @@
   <script>
     // ------------------------- CONFIGURACIÓN -------------------------
     // Reemplaza este objecto con tu firebaseConfig (obtenido de la consola de Firebase)
- // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAiyYFIN0drkgr5t44H5_ton1pvJZ3ZfVY",
   authDomain: "inventario-jgs.firebaseapp.com",
@@ -135,11 +127,6 @@ const firebaseConfig = {
   appId: "1:996017365401:web:80a5ed2d92adf80fd7f308",
   measurementId: "G-3HY7TVPJ80"
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
     
     // -----------------------------------------------------------------
     firebase.initializeApp(firebaseConfig);
