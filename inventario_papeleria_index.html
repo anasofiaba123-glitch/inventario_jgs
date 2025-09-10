@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Inventario - Papelería</title>
+  <style>
+    :root{
+      --main-bg: #f7f7fb;
+      --accent: #2b6cb0;
+      --text-color: #0f172a;
+      --font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      --font-size: 16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:var(--font-family);font-size:var(--font-size);background:var(--main-bg);color:var(--text-color)}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2));box-shadow:0 1px 6px rgba(0,0,0,0.06)}
+    header h1{margin:0;font-size:1.1rem}
+    .wrap{display:grid;grid-template-columns:1fr 360px;gap:18px;padding:18px;max-width:1200px;margin:18px auto}
+    .card{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+
+    /* public products */
+    #publicList{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .product{border-radius:10px;overflow:hidden;border:1px solid #eef2ff;background:#fff}
+    .product img{width:100%;height:140px;object-fit:cover;display:block}
+    .product .info{padding:8px}
+    .product .name{font-weight:600;margin-bottom:6px}
+    .product .price{font-weight:700}
+    .product .qty{font-size:0.9rem;color:#666}
+
+    /* owner panel */
+    #ownerPanel{display:flex;flex-direction:column;gap:12px}
+    label{display:block;font-size:0.85rem;margin-bottom:6px}
+    input[type=text],input[type=number],input[type=file],input[type=password],select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e6edf3}
+    button{cursor:pointer;padding:8px 10px;border-radius:8px;border:0}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-ghost{background:transparent;border:1px solid #e6edf3}
+    .small{padding:6px 8px;font-size:0.9rem}
+    .row{display:flex;gap:8px}
+    .flex{flex:1}
+    footer{padding:12px;text-align:center;color:#475569;font-size:0.85rem}
+
+    /* responsive */
+    @media(max-width:900px){.wrap{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Inventario - Papelería</h1>
+    <div>
+      <button id="ownerBtn" class="small">Panel del dueño</button>
+      <button id="logoutBtn" class="small" style="display:none">Salir</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2 style="margin-top:0">Productos</h2>
+      <div id="publicList">Cargando...</div>
+    </section>
+
+    <aside class="card" id="ownerCard">
+      <div id="ownerLocked">
+        <p>Acceso restringido. Ingresa la contraseña del dueño para modificar el inventario y estilos.</p>
+        <input id="ownerPass" type="password" placeholder="Contraseña del dueño" />
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="loginOwner" class="btn-primary">Entrar</button>
+          <button id="cancelLogin" class="btn-ghost">Cancelar</button>
+        </div>
+      </div>
+
+      <div id="ownerPanel" style="display:none">
+        <h3>Administrar productos</h3>
+        <label>Nombre</label>
+        <input id="prodName" type="text" placeholder="Nombre del producto" />
+        <label>Precio</label>
+        <input id="prodPrice" type="number" min="0" step="0.01" placeholder="Precio" />
+        <label>Cantidad</label>
+        <input id="prodQty" type="number" min="0" step="1" placeholder="Cantidad" />
+        <label>Imagen</label>
+        <input id="prodImage" type="file" accept="image/*" />
+        <div style="display:flex;gap:8px">
+          <button id="saveProd" class="btn-primary">Guardar producto</button>
+          <button id="clearForm" class="btn-ghost">Limpiar</button>
+        </div>
+
+        <hr />
+        <h3>Estilos globales</h3>
+        <label>Color de fondo</label>
+        <input id="styleBg" type="text" placeholder="#f7f7fb o nombre" />
+        <label>Color del acento</label>
+        <input id="styleAccent" type="text" placeholder="#2b6cb0" />
+        <label>Tipografía (font-family)</label>
+        <input id="styleFont" type="text" placeholder="'Arial', sans-serif" />
+        <label>Tamaño base (px)</label>
+        <input id="styleSize" type="number" min="12" max="24" />
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="saveStyles" class="btn-primary">Guardar estilos</button>
+          <button id="resetStyles" class="btn-ghost">Restablecer</button>
+        </div>
+
+        <hr />
+        <h3>Cambiar contraseña</h3>
+        <label>Nueva contraseña</label>
+        <input id="newPass" type="password" placeholder="Escribe nueva contraseña" />
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="changePassBtn" class="btn-primary">Guardar nueva contraseña</button>
+        </div>
+
+        <hr />
+        <h3>Productos (editar / eliminar)</h3>
+        <div id="ownerProducts">Cargando...</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Esta aplicación guarda los cambios en Firebase (Firestore + Storage). Reemplaza <code>firebaseConfig</code> con tu configuración antes de usar.
+  </footer>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "REPLACE_ME",
+      authDomain: "REPLACE_ME",
+      projectId: "REPLACE_ME",
+      storageBucket: "REPLACE_ME",
+      messagingSenderId: "REPLACE_ME",
+      appId: "REPLACE_ME"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    const PRODUCTS = 'products';
+    const META_COLLECTION = 'meta';
+    const SETTINGS_DOC = 'settings';
+
+    const publicList = document.getElementById('publicList');
+    const ownerBtn = document.getElementById('ownerBtn');
+    const ownerCard = document.getElementById('ownerCard');
+    const ownerLocked = document.getElementById('ownerLocked');
+    const ownerPanel = document.getElementById('ownerPanel');
+    const ownerProducts = document.getElementById('ownerProducts');
+    const loginOwner = document.getElementById('loginOwner');
+    const ownerPass = document.getElementById('ownerPass');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const prodName = document.getElementById('prodName');
+    const prodPrice = document.getElementById('prodPrice');
+    const prodQty = document.getElementById('prodQty');
+    const prodImage = document.getElementById('prodImage');
+    const saveProd = document.getElementById('saveProd');
+    const clearForm = document.getElementById('clearForm');
+
+    const styleBg = document.getElementById('styleBg');
+    const styleAccent = document.getElementById('styleAccent');
+    const styleFont = document.getElementById('styleFont');
+    const styleSize = document.getElementById('styleSize');
+    const saveStyles = document.getElementById('saveStyles');
+    const resetStyles = document.getElementById('resetStyles');
+
+    const newPass = document.getElementById('newPass');
+    const changePassBtn = document.getElementById('changePassBtn');
+
+    let currentEditId = null;
+    let ownerLogged = false;
+
+    async function sha256(str){
+      const enc = new TextEncoder();
+      const data = enc.encode(str);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      const arr = Array.from(new Uint8Array(hash));
+      return arr.map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // contraseña inicial jgs123 (hash SHA-256)
+    const DEFAULT_PASS_HASH = "1f72bd8542059dbe85ff0b6e0ba0b651f84f7808f6c52db40c38639b4f9bb10f";
+
+    function applyStyles(settings){
+      if(!settings) return;
+      if(settings.bg) document.documentElement.style.setProperty('--main-bg', settings.bg);
+      if(settings.accent) document.documentElement.style.setProperty('--accent', settings.accent);
+      if(settings.font) document.documentElement.style.setProperty('--font-family', settings.font);
+      if(settings.size) document.documentElement.style.setProperty('--font-size', settings.size + 'px');
+      styleBg.value = settings.bg || '';
+      styleAccent.value = settings.accent || '';
+      styleFont.value = settings.font || '';
+      styleSize.value = settings.size || '';
+    }
+
+    function initRealtime(){
+      db.collection(META_COLLECTION).doc(SETTINGS_DOC).onSnapshot(doc=>{
+        const data = doc.exists ? doc.data() : {};
+        applyStyles(data);
+      });
+
+      db.collection(PRODUCTS).orderBy('createdAt','desc').onSnapshot(snapshot=>{
+        const items = [];
+        snapshot.forEach(doc=>items.push({id:doc.id,...doc.data()}));
+        renderPublic(items);
+        if(ownerLogged) renderOwnerList(items);
+      });
+    }
+
+    loginOwner.addEventListener('click', async ()=>{
+      const pass = ownerPass.value;
+      const hash = await sha256(pass);
+      const doc = await db.collection(META_COLLECTION).doc(SETTINGS_DOC).get();
+      const data = doc.exists ? doc.data() : {};
+      const storedHash = data.ownerPasswordHash || DEFAULT_PASS_HASH;
+      if(hash===storedHash){
+        ownerLogged = true;
+        ownerLocked.style.display='none';
+        ownerPanel.style.display='block';
+        logoutBtn.style.display='inline-block';
+      } else {
+        alert('Contraseña incorrecta');
+      }
+    });
+
+    logoutBtn.addEventListener('click',()=>{
+      ownerLogged=false;
+      ownerLocked.style.display='block';
+      ownerPanel.style.display='none';
+      logoutBtn.style.display='none';
+    });
+
+    ownerBtn.addEventListener('click',()=>{
+      ownerCard.scrollIntoView({behavior:'smooth'});
+    });
+
+    changePassBtn.addEventListener('click', async ()=>{
+      const newP = newPass.value.trim();
+      if(!newP){alert('Escribe nueva contraseña');return}
+      const hash = await sha256(newP);
+      await db.collection(META_COLLECTION).doc(SETTINGS_DOC).set({ownerPasswordHash:hash},{merge:true});
+      alert('Contraseña actualizada. La próxima vez usa la nueva.');
+      newPass.value='';
+    });
+
+    // ... resto del código de productos y estilos (igual que antes)
+
+    function escapeHtml(str){
+      return str.replace(/[&<>"']/g, function(tag){
+        const chars={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'};
+        return chars[tag]||tag;
+      });
+    }
+
+    initRealtime();
+  </script>
+</body>
+</html>
