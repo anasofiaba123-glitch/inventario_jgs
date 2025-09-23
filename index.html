@@ -2,166 +2,220 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Inventario Digital</title>
+  <title>Inventario Papelería</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f3f3f3;
-      margin: 0;
-      padding: 0;
+      margin: 20px;
+      background: #f4f4f9;
     }
-    header {
-      background: #007bff;
-      color: white;
-      padding: 15px;
+    h1, h2 {
       text-align: center;
     }
-    .container {
-      max-width: 900px;
-      margin: 20px auto;
+    .panel, .formulario, .lista {
       background: white;
       padding: 20px;
+      margin: 15px auto;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      max-width: 700px;
     }
-    h2 {
-      margin-top: 0;
+    label {
+      display: block;
+      margin-top: 10px;
     }
-    form {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 20px;
-    }
-    form input {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    form button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    table {
+    input, select, button {
+      margin-top: 5px;
+      padding: 8px;
       width: 100%;
-      border-collapse: collapse;
     }
-    th, td {
+    .producto {
+      border: 1px solid #ccc;
       padding: 10px;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .producto img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      margin-right: 15px;
+      border-radius: 8px;
       border: 1px solid #ddd;
-      text-align: center;
     }
-    th {
-      background: #007bff;
-      color: white;
+    .acciones {
+      margin-left: auto;
     }
-    .btn {
-      padding: 5px 10px;
-      border: none;
+    .acciones button {
+      margin-left: 5px;
+      padding: 6px 10px;
+    }
+    #busqueda {
+      margin-bottom: 15px;
+      padding: 10px;
+      width: 100%;
       border-radius: 5px;
-      cursor: pointer;
-    }
-    .eliminar {
-      background: red;
-      color: white;
-    }
-    .vender {
-      background: green;
-      color: white;
+      border: 1px solid #aaa;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Inventario Digital</h1>
-  </header>
-  <div class="container">
-    <h2>Agregar Producto</h2>
-    <form id="formulario">
-      <input type="text" id="nombre" placeholder="Nombre del producto" required>
-      <input type="number" id="cantidad" placeholder="Cantidad" required>
-      <input type="number" id="precio" placeholder="Precio" required>
-      <button type="submit">Agregar</button>
-    </form>
+  <h1>Inventario Digital - Papelería</h1>
 
-    <h2>Lista de Productos</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th>Cantidad</th>
-          <th>Precio</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tablaProductos">
-      </tbody>
-    </table>
+  <!-- Panel de acceso del dueño -->
+  <div class="panel" id="panelAcceso">
+    <h2>Acceso al Panel del Dueño</h2>
+    <input type="password" id="claveDueno" placeholder="Ingrese la contraseña">
+    <button onclick="accederDueno()">Ingresar</button>
+    <p id="mensajeAcceso" style="color:red;"></p>
+  </div>
+
+  <!-- Panel del dueño -->
+  <div class="panel" id="panelDueno" style="display:none;">
+    <h2>Panel del Dueño</h2>
+    <label>Color de fondo</label>
+    <input type="color" id="colorFondo">
+    <label>Tipografía</label>
+    <select id="tipografia">
+      <option value="Arial">Arial</option>
+      <option value="Verdana">Verdana</option>
+      <option value="Tahoma">Tahoma</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Courier New">Courier New</option>
+    </select>
+    <label>Tamaño de letra</label>
+    <input type="number" id="tamanoLetra" value="16">
+    <button onclick="aplicarCambios()">Aplicar cambios</button>
+    <button onclick="restablecerCambios()">Restablecer</button>
+  </div>
+
+  <!-- Formulario de productos -->
+  <div class="formulario">
+    <h2>Agregar Producto</h2>
+    <label>Nombre:</label>
+    <input type="text" id="nombre">
+    <label>Precio:</label>
+    <input type="number" id="precio">
+    <label>Cantidad:</label>
+    <input type="number" id="cantidad">
+    <label>Imagen:</label>
+    <input type="file" id="imagen" accept="image/*">
+    <button onclick="agregarProducto()">Agregar</button>
+  </div>
+
+  <!-- Búsqueda -->
+  <input type="text" id="busqueda" placeholder="Buscar producto por nombre..." onkeyup="buscarProducto()">
+
+  <!-- Lista de productos -->
+  <div class="lista" id="listaProductos">
+    <h2>Productos</h2>
   </div>
 
   <script>
-    const formulario = document.getElementById("formulario");
-    const tablaProductos = document.getElementById("tablaProductos");
-
     let productos = JSON.parse(localStorage.getItem("productos")) || [];
 
-    function guardarProductos() {
-      localStorage.setItem("productos", JSON.stringify(productos));
-    }
-
-    function renderProductos() {
-      tablaProductos.innerHTML = "";
-      productos.forEach((producto, index) => {
-        const fila = document.createElement("tr");
-        fila.innerHTML = `
-          <td>${producto.nombre}</td>
-          <td>${producto.cantidad}</td>
-          <td>$${producto.precio}</td>
-          <td>
-            <button class="btn vender" onclick="venderProducto(${index})">Vender</button>
-            <button class="btn eliminar" onclick="eliminarProducto(${index})">Eliminar</button>
-          </td>
+    function mostrarProductos(lista = productos) {
+      const contenedor = document.getElementById("listaProductos");
+      contenedor.innerHTML = "<h2>Productos</h2>";
+      if (lista.length === 0) {
+        contenedor.innerHTML += "<p>No hay productos registrados.</p>";
+        return;
+      }
+      lista.forEach((p, index) => {
+        const div = document.createElement("div");
+        div.className = "producto";
+        const img = p.imagen ? `<img src="${p.imagen}" alt="imagen">` : `<img src="" style="background:#ddd;">`;
+        div.innerHTML = `
+          ${img}
+          <div>
+            <p><strong>${p.nombre}</strong></p>
+            <p>Precio: $${p.precio}</p>
+            <p>Cantidad: ${p.cantidad}</p>
+          </div>
+          <div class="acciones">
+            <button onclick="eliminarProducto(${index})">Eliminar</button>
+          </div>
         `;
-        tablaProductos.appendChild(fila);
+        contenedor.appendChild(div);
       });
     }
 
-    formulario.addEventListener("submit", e => {
-      e.preventDefault();
+    function agregarProducto() {
       const nombre = document.getElementById("nombre").value;
-      const cantidad = parseInt(document.getElementById("cantidad").value);
-      const precio = parseFloat(document.getElementById("precio").value);
+      const precio = document.getElementById("precio").value;
+      const cantidad = document.getElementById("cantidad").value;
+      const imagenInput = document.getElementById("imagen");
 
-      productos.push({ nombre, cantidad, precio });
-      guardarProductos();
-      renderProductos();
-      formulario.reset();
-    });
+      if (!nombre || !precio || !cantidad) {
+        alert("Por favor complete todos los campos.");
+        return;
+      }
 
-    function eliminarProducto(index) {
-      productos.splice(index, 1);
-      guardarProductos();
-      renderProductos();
-    }
-
-    function venderProducto(index) {
-      if (productos[index].cantidad > 0) {
-        productos[index].cantidad--;
-        if (productos[index].cantidad === 0) {
-          alert("Producto agotado");
+      let imagen = "";
+      if (imagenInput.files && imagenInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          imagen = e.target.result;
+          guardarProducto(nombre, precio, cantidad, imagen);
         }
-        guardarProductos();
-        renderProductos();
+        reader.readAsDataURL(imagenInput.files[0]);
       } else {
-        alert("No hay stock disponible");
+        guardarProducto(nombre, precio, cantidad, imagen);
       }
     }
 
-    renderProductos();
+    function guardarProducto(nombre, precio, cantidad, imagen) {
+      productos.push({ nombre, precio, cantidad, imagen });
+      localStorage.setItem("productos", JSON.stringify(productos));
+      mostrarProductos();
+      document.getElementById("nombre").value = "";
+      document.getElementById("precio").value = "";
+      document.getElementById("cantidad").value = "";
+      document.getElementById("imagen").value = "";
+    }
+
+    function eliminarProducto(index) {
+      productos.splice(index, 1);
+      localStorage.setItem("productos", JSON.stringify(productos));
+      mostrarProductos();
+    }
+
+    function buscarProducto() {
+      const texto = document.getElementById("busqueda").value.toLowerCase();
+      const filtrados = productos.filter(p => p.nombre.toLowerCase().includes(texto));
+      mostrarProductos(filtrados);
+    }
+
+    function accederDueno() {
+      const clave = document.getElementById("claveDueno").value;
+      if (clave === "admin123") {
+        document.getElementById("panelDueno").style.display = "block";
+        document.getElementById("panelAcceso").style.display = "none";
+      } else {
+        document.getElementById("mensajeAcceso").innerText = "Contraseña incorrecta.";
+      }
+    }
+
+    function aplicarCambios() {
+      const color = document.getElementById("colorFondo").value;
+      const fuente = document.getElementById("tipografia").value;
+      const tamano = document.getElementById("tamanoLetra").value;
+
+      document.body.style.backgroundColor = color;
+      document.body.style.fontFamily = fuente;
+      document.body.style.fontSize = tamano + "px";
+    }
+
+    function restablecerCambios() {
+      document.body.style.backgroundColor = "#f4f4f9";
+      document.body.style.fontFamily = "Arial";
+      document.body.style.fontSize = "16px";
+    }
+
+    mostrarProductos();
   </script>
 </body>
 </html>
