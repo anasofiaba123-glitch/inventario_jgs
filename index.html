@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inventario Papelería</title>
   <style>
     body {
@@ -24,10 +25,23 @@
       display: block;
       margin-top: 10px;
     }
-    input, select, button {
+    input, button {
       margin-top: 5px;
-      padding: 8px;
+      padding: 10px;
       width: 100%;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+    }
+    button {
+      background: #1976d2;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #0d47a1;
     }
     .producto {
       border: 1px solid #ccc;
@@ -48,10 +62,13 @@
     }
     .acciones {
       margin-left: auto;
+      display: flex;
+      flex-direction: row;
+      gap: 5px;
     }
     .acciones button {
-      margin-left: 5px;
       padding: 6px 10px;
+      font-size: 14px;
     }
     #busqueda {
       margin-bottom: 15px;
@@ -59,6 +76,36 @@
       width: 100%;
       border-radius: 5px;
       border: 1px solid #aaa;
+    }
+
+    /* --- Ajustes para pantallas móviles --- */
+    @media (max-width: 768px) {
+      body {
+        margin: 10px;
+      }
+      .producto {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+      }
+      .producto img {
+        width: 100%;
+        height: auto;
+        margin: 0 0 10px 0;
+      }
+      .acciones {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 10px;
+      }
+      .acciones button {
+        flex: 1;
+        font-size: 16px;
+        padding: 10px;
+      }
+      input, button {
+        font-size: 16px;
+      }
     }
   </style>
 </head>
@@ -164,7 +211,7 @@
         return;
       }
       const vender = prompt(`¿Cuántas unidades desea vender? (Disponibles: ${cantidadDisponible})`);
-      if (vender === null) return; // cancelar
+      if (vender === null) return;
       const cantidadVenta = parseInt(vender);
       if (isNaN(cantidadVenta) || cantidadVenta <= 0) {
         alert("Ingrese un número válido.");
@@ -189,4 +236,3 @@
   </script>
 </body>
 </html>
-
